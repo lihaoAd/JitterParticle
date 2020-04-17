@@ -16,13 +16,13 @@ class Vessel {
         }
     }
 
-    draw(ctx) {
+    draw(canvas,ctx) {
     }
 
     drawBackground(ctx) {
     }
 
-    isInsideBound(particle) {
+    insideBound(particle) {
     }
 
     scaleVessel(scale) {
@@ -64,8 +64,8 @@ class RectVessel extends Vessel {
         return location;
     }
 
-    draw(ctx) {
-        ctx.clearRect(this.x, this.y, this.x + this.width, this.y + this.height);
+    draw(canvas,ctx) {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
         this.drawBackground(ctx);
         for (let i = 0; i < this.count; i++) {
             this.particles[i].draw(ctx);
@@ -76,52 +76,58 @@ class RectVessel extends Vessel {
         if (this.backgroundColor) {
             ctx.beginPath();
             ctx.fillStyle = this.backgroundColor;
-            ctx.fillRect(this.x, this.y, this.x + this.width, this.y + this.height);
+            ctx.fillRect(this.x, this.y,  this.width,  this.height);
         }
     }
 
-    isInsideBound(particle) {
-        let x = particle.x;
-        let y = particle.y;
+    insideBound(particle) {
         let particleRadius = particle.radius;
-        if (x - particleRadius < this.x || x + particleRadius > this.x + this.width || y - particleRadius < this.y || y > this.y + this.height) {
+        if ( particle.x - particleRadius <= this.x ||  particle.x + particleRadius >= this.x + this.width
+            ||  particle.y - particleRadius <= this.y ||  particle.y+particleRadius >= this.y + this.height) {
             if (particle.motion === "shake") {
-                if (x - particleRadius < this.x) {
-                    x = this.x + particleRadius;
-                } else if (x + particleRadius > this.x + this.width) {
-                    x = this.x + this.width - particleRadius;
+                if ( particle.x - particleRadius <= this.x) {
+                    particle.x = this.x + particleRadius;
+                } else if (particle.x + particleRadius >= this.x + this.width) {
+                    particle.x = this.x + this.width - particleRadius;
                 }
-                if (y - particleRadius < this.y) {
-                    y = this.y + particleRadius;
-                } else if (y + particleRadius > this.y + this.height) {
-                    y = this.y + this.height - particleRadius;
+                if ( particle.y - particleRadius <= this.y) {
+                    particle.y = this.y + particleRadius;
+                } else if ( particle.y + particleRadius > this.y + this.height) {
+                    particle.y = this.y + this.height - particleRadius;
                 }
-                return {x, y};
             } else if (particle.motion === "sport") {
                 let vectorI = {x: Math.cos(particle.vector), y: Math.sin(particle.vector)};
                 let vectorN = {};
-                if (x - particleRadius < this.x) {
+                if ( particle.x - particleRadius <= this.x) {
+                    particle.x = this.x + particleRadius;
                     vectorN.x = -1;
                     vectorN.y = 0;
-                } else if (x + particleRadius > this.x + this.width) {
+                }else if (particle.x + particleRadius >= this.x + this.width) {
+                    particle.x = this.x + this.width - particleRadius;
                     vectorN.x = 1;
                     vectorN.y = 0;
-                } else if (y - particleRadius < this.y) {
+                }
+
+                if ( particle.y - particleRadius <= this.y) {
+                    particle.y = this.y + particleRadius;
                     vectorN.x = 0;
                     vectorN.y = -1;
-                } else if (y > this.y + this.height) {
+                }else if ( particle.y + particleRadius > this.y + this.height) {
+                    particle.y = this.y + this.height - particleRadius;
                     vectorN.x = 0;
                     vectorN.y = 1;
                 }
-                let theta = Math.acos((vectorN.x * vectorI.x + vectorN.y * vectorI.y) / (Math.sqrt(Math.pow(vectorN.x, 2) + Math.pow(vectorN.y, 2)) + Math.sqrt(Math.pow(vectorI.x, 2) + Math.pow(vectorI.y, 2))));
-                if (theta > Math.PI / 3) {
-                    theta = window.random(0, theta);
+                const iDotN = vectorI.x * vectorN.x + vectorI.y * vectorN.y;
+                const q = 2 * iDotN / (Math.pow(vectorN.x, 2) + Math.pow(vectorN.y, 2));
+                const vectorM = {x: -(q * vectorN.x - vectorI.x), y: -(q * vectorN.y - vectorI.y)};
+                let theta = Math.acos(vectorM.x / Math.sqrt(Math.pow(vectorM.x, 2) + Math.pow(vectorM.y, 2)));
+                if (vectorM.y < 0) {
+                    theta = 2 * Math.PI - theta;
                 }
-                return 2 * Math.PI - (Math.PI - particle.vector - 2 * theta);
+                particle.vector = theta;
             }
 
         }
-        return null;
     }
 
     scaleVessel(scale) {
@@ -147,8 +153,6 @@ class CircleVessel extends Vessel {
         this.originadius = option.radius;
         this.cx = option.cx;
         this.cy = option.cy;
-        this.originCx = option.cx;
-        this.originCy = option.cy;
         this.scale = 1;
         this.generate(option);
     }
@@ -164,8 +168,8 @@ class CircleVessel extends Vessel {
         return location;
     }
 
-    draw(ctx) {
-        ctx.clearRect(this.cx - this.radius, this.cy - this.radius, this.cx + this.radius, this.cy + this.radius);
+    draw(canvas,ctx) {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
         this.drawBackground(ctx);
         for (let i = 0; i < this.count; i++) {
             this.particles[i].draw(ctx);
@@ -182,11 +186,9 @@ class CircleVessel extends Vessel {
         }
     }
 
-    isInsideBound(particle) {
-        let x = particle.x;
-        let y = particle.y;
+    insideBound(particle) {
         let particleRadius = particle.radius;
-        if (Math.sqrt(Math.pow(this.cx - x, 2) + Math.pow(this.cy - y, 2)) > (this.radius - particleRadius)) {
+        if (Math.sqrt(Math.pow(this.cx - particle.x, 2) + Math.pow(this.cy - particle.y, 2)) > (this.radius - particleRadius)) {
             if (particle.motion === "shake") {
                 let radian = Math.acos((particle.x - this.cx) / Math.sqrt(Math.pow(particle.x - this.cx, 2) + Math.pow(particle.y - this.cy, 2)));
                 if (particle.x < this.cx && particle.y > this.cy) {
@@ -194,33 +196,54 @@ class CircleVessel extends Vessel {
                 } else if (particle.x > this.cx && particle.y >= this.cy) {
                     radian = 2 * Math.PI - radian;
                 }
-                const x = this.cx + Math.cos(radian) * (this.radius - particleRadius);
-                const y = this.cy - Math.sin(radian) * (this.radius - particleRadius);
-                return {x, y};
+                const xTemp = this.cx + Math.cos(radian) * (this.radius - particleRadius);
+                const yTemp = this.cy - Math.sin(radian) * (this.radius - particleRadius);
+                particle.x = xTemp;
+                particle.y = yTemp;
             } else if (particle.motion === "sport") {
-                let vectorI = {x: Math.cos(particle.vector), y: Math.sin(particle.vector)};
-                let vectorN = {x: x - this.cx, y: y - this.cy};
-                let theta = Math.acos((vectorN.x * vectorI.x + vectorN.y * vectorI.y) / (Math.sqrt(Math.pow(vectorN.x, 2) + Math.pow(vectorN.y, 2)) + Math.sqrt(Math.pow(vectorI.x, 2) + Math.pow(vectorI.y, 2))));
-                if (theta > Math.PI / 3) {
-                    theta = window.random(0, theta);
+                let f = Math.acos((particle.x - this.cx) / Math.sqrt(Math.pow(particle.x - this.cx, 2)
+                    + Math.pow(particle.y - this.cy, 2)));
+                if (particle.y > this.cy) {
+                    f = Math.PI * 2 - f;
                 }
-                return 2 * Math.PI - (Math.PI - particle.vector - 2 * theta);
+                //限制超出范围，计算临界坐标
+                particle.x = this.cx + (this.radius - particleRadius) * Math.cos(f);
+                particle.y = this.cy - (this.radius - particleRadius) * Math.sin(f);
+                //粒子的方向向量
+                const vectorI = {x: Math.cos(particle.vector), y: Math.sin(particle.vector)};
+                //对称轴向量
+                const vectorN = {x: particle.x - this.cx, y: -particle.y + this.cy};
+                const iDotN = vectorI.x * vectorN.x + vectorI.y * vectorN.y;
+                const q = 2 * iDotN / (Math.pow(vectorN.x, 2) + Math.pow(vectorN.y, 2));
+                const vectorM = {x: -(q * vectorN.x - vectorI.x), y: -(q * vectorN.y - vectorI.y)};
+                let theta = Math.acos(vectorM.x / Math.sqrt(Math.pow(vectorM.x, 2) + Math.pow(vectorM.y, 2)));
+                if (vectorM.y < 0) {
+                    theta = 2 * Math.PI - theta;
+                }
+                particle.vector = theta;
             }
-
         }
-        return null;
     }
 
     scaleVessel(scale) {
-        this.radius = this.originadius * scale; //缩放半径
-        this.cx = this.originCx * scale;
-        this.cy = this.originCy * scale;
-        const scaleParticle = scale / this.scale;
-        this.scale = scale;
+        let realScale = scale;
+        this.radius = this.originadius * realScale; //缩放半径
+        const scaleParticle = realScale / this.scale;
+        this.scale = realScale;
         for (let i = 0; i < this.count; i++) {
-            this.particles[i].x = this.particles[i].x * scaleParticle;
-            this.particles[i].y = this.particles[i].y * scaleParticle;
-            this.particles[i].speed = this.particles[i].speed / scaleParticle;
+            const particle = this.particles[i];
+            const radial = Math.sqrt(Math.pow(particle.x - this.cx, 2) + Math.pow(particle.y - this.cy, 2)) * scaleParticle;
+            let theta = Math.acos((particle.x - this.cx) /
+                Math.sqrt(Math.pow(particle.x - this.cx, 2) + Math.pow(particle.y - this.cy, 2)));
+            if (particle.y < this.cy) {
+                particle.x = this.cx + radial * Math.cos(theta);
+                particle.y = this.cy - radial * Math.sin(theta);
+            } else {
+                theta = Math.PI * 2 - theta;
+                particle.x = this.cx + radial * Math.cos(theta);
+                particle.y = this.cy - radial * Math.sin(theta);
+            }
+            particle.speed /= scaleParticle;
         }
     }
 }
@@ -236,17 +259,18 @@ class Particle {
         this.y = location.y;
         this.motion = motion;
         this.radius = radius;
+        this.radiaGradientColorStart = null;
+        this.radiaGradientColorStop = null;
         if (option.motion === "sport") {
             //初始运动方向
             this.vector = window.random(0, 2 * Math.PI);
         }
-        this.color = {}
-        if(option.radiaGradient){
-            this.color.start = option.radiaGradient.start;
-            this.color.stop = option.radiaGradient.stop;
-        }else{
-            this.color.start = option.color || "red";
-            this.color.stop = option.color || "red";
+
+        if (option.radiaGradient) {
+            this.radiaGradientColorStart = option.radiaGradient.start;
+            this.radiaGradientColorStop = option.radiaGradient.stop;
+        } else{
+            this.color = option.color || 'red';
         }
     }
 
@@ -256,46 +280,41 @@ class Particle {
         } else if (this.motion === "sport") {
             this.sport();
         }
+
+        if (this.color) {
+            ctx.fillStyle = this.color;
+        } else if (this.radiaGradientColorStart && this.radiaGradientColorStop) {
+            const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+            gradient.addColorStop(0, this.radiaGradientColorStart);
+            gradient.addColorStop(1, this.radiaGradientColorStop);
+            ctx.fillStyle = gradient;
+        }
         ctx.beginPath();
-        let gradient = ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.radius);
-        gradient.addColorStop(0,this.color.start);
-        gradient.addColorStop(1,this.color.stop);
-        ctx.fillStyle = gradient;
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, true);
         ctx.fill();
     }
 
     shake() {
-        let speedX = random(-this.speed, this.speed);
-        let speedY = random(-this.speed, this.speed);
+        let speedX = window.random(-this.speed, this.speed);
+        let speedY = window.random(-this.speed, this.speed);
         this.x += speedX;
         this.y += speedY;
-        let coord = this.vessel.isInsideBound(this);
-        if (coord != null) {
-            this.x = coord.x;
-            this.y = coord.y;
-        }
+        this.vessel.insideBound(this);
     }
 
     sport() {
         let speedX = this.speed * Math.cos(this.vector);
         let speedY = this.speed * Math.sin(this.vector);
         this.x += speedX;
-        this.y += speedY;
-        let theta = this.vessel.isInsideBound(this);
-        if (theta != null) {
-            this.vector = theta;
-        }
+        this.y -= speedY;
+        this.vessel.insideBound(this);
     }
 }
 
 class Jitter {
     constructor(option) {
-        this.canvas = null;
-        this.ctx = null;
         const canvasId = option.canvasId;
-        let canvas = document.getElementById(canvasId);
-        this.canvas = canvas;
+        this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext("2d");
         const vessel = option.vessel || "circle";
         if ("circle" === vessel) {
@@ -311,7 +330,7 @@ class Jitter {
     }
 
     display() {
-        this.vessel.draw(this.ctx);
+        this.vessel.draw(this.canvas,this.ctx);
         this.handler = requestAnimationFrame(this.display.bind(this));
     }
 
